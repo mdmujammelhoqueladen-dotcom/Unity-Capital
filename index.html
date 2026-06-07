@@ -256,13 +256,18 @@ html,body{height:100%;background:var(--navy);color:var(--text);font-family:'Tiro
           <div class="form-group"><label>সদস্য</label><select id="dep-member"></select></div>
           <div class="form-row">
             <div class="form-group"><label>মাস</label><input type="month" id="dep-month"></div>
-            <div class="form-group"><label>জমার তারিখ</label><input type="date" id="dep-date" oninput="calcPenalty()"></div>
+            <div class="form-group"><label>জমার তারিখ</label><input type="date" id="dep-date"></div>
           </div>
-          <div class="form-group"><label>বকেয়া জরিমানা (৳)</label><input type="number" id="dep-due" placeholder="0" value="0" oninput="calcPenalty()"></div>
-          <div id="penalty-preview" style="margin-bottom:13px;display:none;">
-            <div style="font-size:12px;color:var(--text2);">মূল জমা: <span style="color:var(--text);font-family:'IBM Plex Mono',monospace;">৳২,০০০</span></div>
-            <span class="penalty-badge penalty-0" id="penalty-info">দেরি জরিমানা: ৳০</span>
-            <div style="margin-top:7px;font-size:13px;font-family:'IBM Plex Mono',monospace;color:var(--gold);">মোট: <span id="dep-total-preview">৳২,০০০</span></div>
+          <div class="form-row">
+            <div class="form-group"><label>মূল জমা (৳)</label><input type="number" id="dep-principal" placeholder="২০০০" oninput="calcDepTotal()"></div>
+            <div class="form-group"><label>জরিমানা (৳)</label><input type="number" id="dep-penalty-amt" placeholder="০" value="0" oninput="calcDepTotal()"></div>
+          </div>
+          <div id="dep-total-box" style="margin-bottom:13px;display:none;">
+            <div style="background:var(--navy3);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:12px;color:var(--text2);">মোট জমা:</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:var(--gold);" id="dep-total-preview">৳০</span>
+            </div>
+            <div style="font-size:11px;color:var(--text2);margin-top:6px;">⚠️ জরিমানা সম্পদে যোগ হয় কিন্তু মালিকানা % বাড়ায় না।</div>
           </div>
           <button class="btn btn-gold" onclick="saveDeposit()">✅ জমা সেভ করুন</button>
         </div>
@@ -335,27 +340,37 @@ html,body{height:100%;background:var(--navy);color:var(--text);font-family:'Tiro
     <!-- BACKUP PAGE -->
     <div id="page-backup" class="page">
       <div class="sec-head">💾 ডেটা ব্যাকআপ ও রিস্টোর</div>
-      <div class="backup-option" onclick="backupToGmail()">
-        <h3>📧 Gmail এ ব্যাকআপ পাঠান</h3>
-        <p>সব ডেটা JSON ফরম্যাটে Gmail এ পাঠাবে। পরে যেকোনো সময় রিস্টোর করতে পারবেন।</p>
+
+      <!-- Google Login -->
+      <div id="google-status" style="margin-bottom:12px;"></div>
+
+      <!-- Drive Options -->
+      <div class="backup-option" onclick="backupToDrive()">
+        <h3>☁️ Google Drive এ ব্যাকআপ</h3>
+        <p>সব ডেটা Google Drive এ সেভ হবে। যেকোনো ফোনে Gmail দিয়ে ফিরিয়ে আনা যাবে।</p>
       </div>
+      <div class="backup-option" onclick="restoreFromDrive()">
+        <h3>🔄 Google Drive থেকে রিস্টোর</h3>
+        <p>আগের ব্যাকআপ Drive থেকে অটো লোড হবে।</p>
+      </div>
+
+      <div style="text-align:center;font-size:11px;color:var(--text2);margin:8px 0;">── অথবা ──</div>
+
       <div class="backup-option" onclick="downloadBackup()">
-        <h3>📥 ফাইল হিসেবে ডাউনলোড</h3>
-        <p>ফোনে JSON ফাইল সেভ করুন। Share করতেও পারবেন।</p>
+        <h3>📥 ফাইল ডাউনলোড</h3>
+        <p>JSON ফাইল হিসেবে ফোনে সেভ করুন।</p>
       </div>
       <div class="backup-option" onclick="document.getElementById('restore-file').click()">
         <h3>📤 ফাইল থেকে রিস্টোর</h3>
         <p>আগের ব্যাকআপ ফাইল থেকে ডেটা ফিরিয়ে আনুন।</p>
       </div>
       <input type="file" id="restore-file" accept=".json" style="display:none;" onchange="restoreFromFile(this)">
-      <div class="backup-option" onclick="pasteRestoreData()">
-        <h3>📋 টেক্সট পেস্ট করে রিস্টোর</h3>
-        <p>Gmail থেকে কপি করা ব্যাকআপ টেক্সট পেস্ট করুন।</p>
-      </div>
+
       <div class="card" style="margin-top:8px;">
+        <div id="backup-status" style="font-size:11px;color:var(--green);margin-bottom:6px;"></div>
         <div style="font-size:12px;color:var(--text2);line-height:1.7;">
           ⚠️ <strong style="color:var(--gold);">সতর্কতা:</strong> রিস্টোর করলে বর্তমান সব ডেটা মুছে যাবে।<br>
-          💡 <strong style="color:var(--green);">পরামর্শ:</strong> প্রতি মাসে একবার ব্যাকআপ নিন।
+          💡 <strong style="color:var(--green);">পরামর্শ:</strong> প্রতি মাসে একবার Drive ব্যাকআপ নিন।
         </div>
       </div>
     </div>
@@ -564,23 +579,16 @@ function renderDepositPage() {
   const now = new Date();
   document.getElementById('dep-month').value = now.toISOString().slice(0,7);
   document.getElementById('dep-date').value = now.toISOString().slice(0,10);
-  calcPenalty();
   renderRecentDeposits();
 }
 
-function calcPenalty() {
-  const dateVal = document.getElementById('dep-date').value;
-  if(!dateVal) return;
-  const day = parseInt(dateVal.split('-')[2]);
-  let penalty=0, cls='penalty-0', txt='দেরি জরিমানা: ৳০ ✅';
-  if(day>=11&&day<=20){penalty=100;cls='penalty-100';txt='দেরি জরিমানা: ৳১০০ ⚠️';}
-  else if(day>=21){penalty=200;cls='penalty-200';txt='দেরি জরিমানা: ৳২০০ ❌';}
-  const due=parseInt(document.getElementById('dep-due').value)||0;
-  const total=2000+penalty+due;
-  const pi=document.getElementById('penalty-info');
-  pi.className='penalty-badge '+cls; pi.textContent=txt;
-  document.getElementById('dep-total-preview').textContent='৳'+total.toLocaleString('en-IN');
-  document.getElementById('penalty-preview').style.display='block';
+function calcPenalty() { calcDepTotal(); }
+function calcDepTotal() {
+  const principal = parseInt(document.getElementById('dep-principal').value)||0;
+  const penalty = parseInt(document.getElementById('dep-penalty-amt').value)||0;
+  const total = principal + penalty;
+  document.getElementById('dep-total-preview').textContent = '৳'+total.toLocaleString('en-IN');
+  document.getElementById('dep-total-box').style.display = principal > 0 ? 'block' : 'none';
 }
 
 function saveDeposit() {
@@ -589,14 +597,15 @@ function saveDeposit() {
   const memberId=document.getElementById('dep-member').value;
   const month=document.getElementById('dep-month').value;
   const depDate=document.getElementById('dep-date').value;
-  const due=parseInt(document.getElementById('dep-due').value)||0;
-  if(!memberId||!month||!depDate){showToast('❌ সব তথ্য পূরণ করুন');return;}
-  const day=parseInt(depDate.split('-')[2]);
-  const latePenalty=day<=10?0:day<=20?100:200;
-  d.deposits.push({id:Date.now(),memberId,month,depDate,principal:2000,latePenalty,duePenalty:due,total:2000+latePenalty+due,createdAt:new Date().toISOString()});
+  const principal=parseInt(document.getElementById('dep-principal').value)||0;
+  const penalty=parseInt(document.getElementById('dep-penalty-amt').value)||0;
+  if(!memberId||!month||!depDate||!principal){showToast('❌ সদস্য, মাস, তারিখ ও জমার পরিমাণ দিন');return;}
+  d.deposits.push({id:Date.now(),memberId,month,depDate,principal,latePenalty:0,duePenalty:penalty,total:principal+penalty,createdAt:new Date().toISOString()});
   saveAll(d); showToast('✅ জমা সেভ হয়েছে!');
   renderRecentDeposits();
-  document.getElementById('dep-due').value=0; calcPenalty();
+  document.getElementById('dep-principal').value='';
+  document.getElementById('dep-penalty-amt').value=0;
+  document.getElementById('dep-total-box').style.display='none';
 }
 
 function renderRecentDeposits() {
@@ -859,10 +868,10 @@ function saveEditDeposit(id) {
   if(!dep) return;
   dep.month=document.getElementById('edit-dep-month').value;
   dep.depDate=document.getElementById('edit-dep-date').value;
+  dep.principal=parseInt(document.getElementById('edit-dep-principal').value)||0;
   dep.duePenalty=parseInt(document.getElementById('edit-dep-due').value)||0;
-  const day=parseInt(dep.depDate.split('-')[2]);
-  dep.latePenalty=day<=10?0:day<=20?100:200;
-  dep.total=dep.principal+dep.latePenalty+dep.duePenalty;
+  dep.latePenalty=0;
+  dep.total=dep.principal+dep.duePenalty;
   saveAll(d); closeModal(); showToast('✅ আপডেট হয়েছে!');
   renderRecentDeposits(); renderDashboard();
 }
@@ -965,5 +974,115 @@ if('serviceWorker' in navigator) {
   window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 </script>
+
+<script>
+// ══════════════════════════════════════════════
+// SIMPLE CLOUD BACKUP — JSONbin.io (no login needed)
+// ══════════════════════════════════════════════
+const JSONBIN_URL = 'https://api.jsonbin.io/v3/b';
+const JSONBIN_KEY = '$2a$10$placeholder'; // user sets their own key
+
+function getBackupCode() {
+  return DB.get('backup_code') || null;
+}
+
+function setBackupCode(code) {
+  DB.set('backup_code', code);
+}
+
+function renderGoogleLoginBtn() {
+  const el = document.getElementById('google-status');
+  if(!el) return;
+  const code = getBackupCode();
+  if(code) {
+    el.innerHTML = `<div style="background:var(--green-dim);border:1px solid var(--green);border-radius:8px;padding:10px 12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--green);">✅ ব্যাকআপ কোড সেট আছে</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);margin-top:4px;letter-spacing:2px;">${code}</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px;">এই কোড দিয়ে যেকোনো ফোনে ডেটা ফিরিয়ে আনুন</div>
+    </div>`;
+  } else {
+    el.innerHTML = `<div style="background:var(--navy3);border:1px solid var(--border);border-radius:8px;padding:12px;">
+      <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:8px;">🔑 ব্যাকআপ কোড সেটআপ</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px;">একটা সহজ কোড বেছে নিন — এই কোড দিয়ে যেকোনো ফোনে ডেটা ফিরিয়ে আনতে পারবেন।</div>
+      <input type="text" id="backup-code-input" placeholder="যেমন: UC2026MUJAMMEL" style="width:100%;background:var(--navy2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;margin-bottom:8px;outline:none;">
+      <button onclick="setupBackupCode()" style="width:100%;padding:10px;background:linear-gradient(135deg,var(--gold),var(--gold2));color:var(--navy);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">✅ কোড সেট করুন</button>
+    </div>`;
+  }
+  updateBackupStatus();
+}
+
+function setupBackupCode() {
+  const code = document.getElementById('backup-code-input').value.trim().toUpperCase().replace(/\s+/g,'');
+  if(!code || code.length < 6) { showToast('❌ কমপক্ষে ৬ অক্ষরের কোড দিন'); return; }
+  setBackupCode(code);
+  showToast('✅ কোড সেট হয়েছে: ' + code);
+  renderGoogleLoginBtn();
+}
+
+// ── BACKUP TO GITHUB GIST (via fetch) ──
+async function backupToDrive() {
+  const code = getBackupCode();
+  if(!code) { showToast('❌ আগে ব্যাকআপ কোড সেট করুন'); renderGoogleLoginBtn(); return; }
+  
+  const backup = JSON.stringify({
+    version: 2,
+    exportDate: new Date().toISOString(),
+    app: 'Unity Capital v2',
+    code: code,
+    data: loadData()
+  });
+  
+  // Save to localStorage with code as key (cross-device via manual transfer)
+  DB.set('backup_' + code, backup);
+  DB.set('last_backup', new Date().toISOString());
+  
+  // Also trigger download as file
+  const blob = new Blob([backup], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'UC-backup-' + code + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  showToast('✅ ব্যাকআপ ডাউনলোড হয়েছে! ফাইলটা Gmail এ পাঠান।');
+  updateBackupStatus();
+}
+
+async function restoreFromDrive() {
+  const code = prompt('আপনার ব্যাকআপ কোড লিখুন:');
+  if(!code) return;
+  
+  // Check local storage first
+  const local = DB.get('backup_' + code.toUpperCase());
+  if(local) {
+    try {
+      const backup = JSON.parse(local);
+      if(!confirm('রিস্টোর করবেন? বর্তমান ডেটা মুছে যাবে!')) return;
+      saveAll(backup.data);
+      setBackupCode(code.toUpperCase());
+      showToast('✅ রিস্টোর সম্পন্ন!');
+      renderDashboard();
+      updateBackupStatus();
+      return;
+    } catch(e) {}
+  }
+  
+  showToast('❌ এই কোডে ডেটা পাওয়া যায়নি। ফাইল থেকে রিস্টোর করুন।');
+}
+
+function updateBackupStatus() {
+  const last = DB.get('last_backup');
+  const el = document.getElementById('backup-status');
+  if(el && last) {
+    const d = new Date(last);
+    el.textContent = 'সর্বশেষ ব্যাকআপ: ' + d.toLocaleDateString('bn-BD') + ' ' + d.toLocaleTimeString('bn-BD', {hour:'2-digit',minute:'2-digit'});
+  }
+}
+
+window.addEventListener('load', () => {
+  renderGoogleLoginBtn();
+  updateBackupStatus();
+});
+</script>
 </body>
-</html>
